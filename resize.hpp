@@ -5,7 +5,7 @@
 #include <cmath>
 #include <thread>
 
-float WeightCoeff(float x, float a) {
+inline float WeightCoeff(float x, float a) {
   if (x <= 1) {
     return 1 - (a + 3) * x * x + (a + 2) * x * x * x;
   } else if (x < 2) {
@@ -32,12 +32,10 @@ void CalcCoeff4x4(float x, float y, float *coeff) {
 }
 
 unsigned char BGRAfterBiCubic(RGBImage src, float x_float, float y_float,
-                              int channels, int d) {
-  float coeff[16];
+                              int channels, int d, float *coeff) {
 
   int x0 = floor(x_float) - 1;
   int y0 = floor(y_float) - 1;
-  CalcCoeff4x4(x_float, y_float, coeff);
 
   float sum = .0f;
   for (int i = 0; i < 4; i++) {
@@ -49,9 +47,17 @@ unsigned char BGRAfterBiCubic(RGBImage src, float x_float, float y_float,
   return static_cast<unsigned char>(sum);
 }
 
-void ResizeImageThread(RGBImage src, float ratio, int x_left, int x_right, int y_up, int y_down, int channels, int thischannel, unsigned char *res) {
-  int resize_rows = src.rows * ratio;
-  int resize_cols = src.cols * ratio;
+
+void ResizeImageThread(RGBImage src, int i, int j, int src_x, int src_y, int channels, int thischannel, unsigned char *res, float *coeff){
+  int resize_cols = src.cols * 5.f;
+  res[((i * resize_cols) + j) * channels + thischannel] = BGRAfterBiCubic(src, src_x, src_y, channels, thischannel, coeff);
+  return;
+}
+
+void ResizeImagePart(RGBImage src, float ratio, int x_left, int x_right, int y_up, int y_down, int channels, unsigned char *res) {
+//  static const int resize_rows = src.rows * ratio;
+//  static const int resize_cols = src.cols * ratio;
+  const int resize_cols = src.cols * ratio;
   auto check_perimeter = [src](float x, float y) -> bool {
     return x < src.rows - 2 && x > 1 && y < src.cols - 2 && y > 1;
   };
@@ -61,36 +67,35 @@ void ResizeImageThread(RGBImage src, float ratio, int x_left, int x_right, int y
       float src_x = i / ratio;
       float src_y = j / ratio;
       if (check_perimeter(src_x, src_y)) {
-          res[((i * resize_cols) + j) * channels + thischannel] =
-              BGRAfterBiCubic(src, src_x, src_y, channels, thischannel);
+        float coeff[16];
+        CalcCoeff4x4(src_x, src_y, coeff);
+        /*std::thread worker0(ResizeImageThread, src, i, j, src_x, src_y, channels, 0, res, coeff);
+        std::thread worker1(ResizeImageThread, src, i, j, src_x, src_y, channels, 1, res, coeff);
+        std::thread worker2(ResizeImageThread, src, i, j, src_x, src_y, channels, 2, res, coeff);
+        worker0.join();
+        worker1.join();
+        worker2.join();*/
+        res[((i * resize_cols) + j) * channels + 0] = BGRAfterBiCubic(src, src_x, src_y, channels, 0, coeff);
+        res[((i * resize_cols) + j) * channels + 1] = BGRAfterBiCubic(src, src_x, src_y, channels, 1, coeff);
+        res[((i * resize_cols) + j) * channels + 2] = BGRAfterBiCubic(src, src_x, src_y, channels, 2, coeff);
       }
     }
   }
   return ;
 }
 
-void ResizeImagePart(RGBImage src, float ratio, int x_left, int x_right, int y_up, int y_down, int channels, unsigned char *res) {
-  std::thread t0(ResizeImageThread, src, ratio, x_left, x_right, y_up, y_down, channels, 0, res);
-  std::thread t1(ResizeImageThread, src, ratio, x_left, x_right, y_up, y_down, channels, 1, res);
-  std::thread t2(ResizeImageThread, src, ratio, x_left, x_right, y_up, y_down, channels, 2, res);
-  t0.join();
-  t1.join();
-  t2.join();
-  return ;
-}
-
 RGBImage ResizeImage(RGBImage src, float ratio) {
   register const int channels = src.channels;
   Timer timer("resize image by 5x");
-  register int resize_rows = src.rows * ratio;
-  register int resize_cols = src.cols * ratio;
+  register const int resize_rows = src.rows * ratio;
+  register const int resize_cols = src.cols * ratio;
 
   printf("resize to: %d x %d\n", resize_rows, resize_cols);
 
   auto res = new unsigned char[channels * resize_rows * resize_cols];
   std::fill(res, res + channels * resize_rows * resize_cols, 0);
 
-  register const int n=3;
+  register const int n=4;
   std::thread PartThread[n][n];
 
   for(int x = 0 ; x < n ; x++)
