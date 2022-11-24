@@ -7,14 +7,17 @@
 
 inline float WeightCoeff(float x, float a) {
   if (x <= 1) {
-    return 1 - (a + 3) * x * x + (a + 2) * x * x * x;
+    float x_2 = x*x;
+    return 1 - (a + 3) * x_2 + (a + 2) * x * x_2;
   } else if (x < 2) {
-    return -4 * a + 8 * a * x - 5 * a * x * x + a * x * x * x;
+    float x_2 = x*x;
+    float a4 = 4 * a;
+    return -1 * a4 + 2 * a4 * x - 5 * a * x_2 + a * x * x_2;
   }
   return 0.0;
 }
 
-void CalcCoeff4x4(float x, float y, float *coeff) {
+static void CalcCoeff4x4(float x, float y, float *coeff) {
   const float a = -0.5f;
 
   float u = x - floor(x);
@@ -31,8 +34,7 @@ void CalcCoeff4x4(float x, float y, float *coeff) {
   }
 }
 
-unsigned char BGRAfterBiCubic(RGBImage src, float x_float, float y_float,
-                              int channels, int d, float *coeff) {
+static unsigned char BGRAfterBiCubic(RGBImage src, float x_float, float y_float, int channels, int d, float *coeff) {
 
   int x0 = floor(x_float) - 1;
   int y0 = floor(y_float) - 1;
@@ -40,19 +42,18 @@ unsigned char BGRAfterBiCubic(RGBImage src, float x_float, float y_float,
   float sum = .0f;
   for (int i = 0; i < 4; i++) {
     for (int j = 0; j < 4; j++) {
-      sum += coeff[i * 4 + j] *
-             src.data[((x0 + i) * src.cols + y0 + j) * channels + d];
+      sum += coeff[i * 4 + j] * src.data[((x0 + i) * src.cols + y0 + j) * channels + d];
     }
   }
   return static_cast<unsigned char>(sum);
 }
 
 
-void ResizeImageThread(RGBImage src, int i, int j, int src_x, int src_y, int channels, int thischannel, unsigned char *res, float *coeff){
-  int resize_cols = src.cols * 5.f;
-  res[((i * resize_cols) + j) * channels + thischannel] = BGRAfterBiCubic(src, src_x, src_y, channels, thischannel, coeff);
-  return;
-}
+//void ResizeImageThread(RGBImage src, int i, int j, int src_x, int src_y, int channels, int thischannel, unsigned char *res, float *coeff){
+//  int resize_cols = src.cols * 5.f;
+// res[((i * resize_cols) + j) * channels + thischannel] = BGRAfterBiCubic(src, src_x, src_y, channels, thischannel, coeff);
+//  return;
+//}
 
 void ResizeImagePart(RGBImage src, float ratio, int x_left, int x_right, int y_up, int y_down, int channels, unsigned char *res) {
 //  static const int resize_rows = src.rows * ratio;
@@ -61,7 +62,7 @@ void ResizeImagePart(RGBImage src, float ratio, int x_left, int x_right, int y_u
   auto check_perimeter = [src](float x, float y) -> bool {
     return x < src.rows - 2 && x > 1 && y < src.cols - 2 && y > 1;
   };
-
+//  Timer part("part");
   for (register int i = x_left; i < x_right; i++) {
     for (register int j = y_up; j < y_down; j++) {
       float src_x = i / ratio;
