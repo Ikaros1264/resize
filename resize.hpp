@@ -34,18 +34,24 @@ static void CalcCoeff4x4(float x, float y, float *coeff) {
   }
 }
 
-static unsigned char BGRAfterBiCubic(RGBImage src, float x_float, float y_float, int channels, int d, float *coeff) {
+static void BGRAfterBiCubic(RGBImage src, float x_float, float y_float, int channels, unsigned char *sum, float *coeff) {
 
   int x0 = floor(x_float) - 1;
   int y0 = floor(y_float) - 1;
 
-  float sum = .0f;
+  float sumf[3] = {.0f};
   for (int i = 0; i < 4; i++) {
     for (int j = 0; j < 4; j++) {
-      sum += coeff[i * 4 + j] * src.data[((x0 + i) * src.cols + y0 + j) * channels + d];
+      float temp = coeff[i * 4 + j];
+      sumf[0] += temp * src.data[((x0 + i) * src.cols + y0 + j) * channels + 0];
+      sumf[1] += temp * src.data[((x0 + i) * src.cols + y0 + j) * channels + 1];
+      sumf[2] += temp * src.data[((x0 + i) * src.cols + y0 + j) * channels + 2];
     }
   }
-  return static_cast<unsigned char>(sum);
+  sum[0] = static_cast<unsigned char>(sumf[0]);
+  sum[1] = static_cast<unsigned char>(sumf[1]);
+  sum[2] = static_cast<unsigned char>(sumf[2]);  
+  return ;
 }
 
 
@@ -62,7 +68,7 @@ void ResizeImagePart(RGBImage src, float ratio, int x_left, int x_right, int y_u
   auto check_perimeter = [src](float x, float y) -> bool {
     return x < src.rows - 2 && x > 1 && y < src.cols - 2 && y > 1;
   };
-//  Timer part("part");
+  Timer part("worker");
   for (register int i = x_left; i < x_right; i++) {
     for (register int j = y_up; j < y_down; j++) {
       float src_x = i / ratio;
@@ -76,9 +82,11 @@ void ResizeImagePart(RGBImage src, float ratio, int x_left, int x_right, int y_u
         worker0.join();
         worker1.join();
         worker2.join();*/
-        res[((i * resize_cols) + j) * channels + 0] = BGRAfterBiCubic(src, src_x, src_y, channels, 0, coeff);
-        res[((i * resize_cols) + j) * channels + 1] = BGRAfterBiCubic(src, src_x, src_y, channels, 1, coeff);
-        res[((i * resize_cols) + j) * channels + 2] = BGRAfterBiCubic(src, src_x, src_y, channels, 2, coeff);
+        unsigned char sum[3];
+        BGRAfterBiCubic(src, src_x, src_y, channels, sum, coeff);
+        res[((i * resize_cols) + j) * channels + 0] = sum[0];
+        res[((i * resize_cols) + j) * channels + 1] = sum[1];
+        res[((i * resize_cols) + j) * channels + 2] = sum[2];
       }
     }
   }
