@@ -104,7 +104,7 @@ RGBImage ResizeImage(RGBImage src, float ratio) {
   auto res = new unsigned char[channels * resize_rows * resize_cols];
   std::fill(res, res + channels * resize_rows * resize_cols, 0);
 
-  register const int n=4;
+  register const int n=5;
   std::thread PartThread[n][n];
 
   for(int x = 0 ; x < n ; x++)
