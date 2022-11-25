@@ -4,6 +4,8 @@
 #include "utils.hpp"
 #include <cmath>
 #include <thread>
+#include "immintrin.h"
+#include <vector>
 
 inline float WeightCoeff(float x, float a) {
   if (x <= 1) {
@@ -26,10 +28,10 @@ static void CalcCoeff4x4(float x, float y, float *coeff) {
   u += 1;
   v += 1;
 
+//  #pragma simd
   for (int i = 0; i < 4; i++) {
     for (int j = 0; j < 4; j++) {
-      coeff[i * 4 + j] =
-          WeightCoeff(fabs(u - i), a) * WeightCoeff(fabs(v - j), a);
+      coeff[i * 4 + j] = WeightCoeff(fabs(u - i), a) * WeightCoeff(fabs(v - j), a);
     }
   }
 }
@@ -40,17 +42,56 @@ static void BGRAfterBiCubic(RGBImage src, float x_float, float y_float, int chan
   int y0 = floor(y_float) - 1;
 
   float sumf[3] = {.0f};
+//  #pragma simd
   for (int i = 0; i < 4; i++) {
     for (int j = 0; j < 4; j++) {
       float temp = coeff[i * 4 + j];
-      sumf[0] += temp * src.data[((x0 + i) * src.cols + y0 + j) * channels + 0];
-      sumf[1] += temp * src.data[((x0 + i) * src.cols + y0 + j) * channels + 1];
-      sumf[2] += temp * src.data[((x0 + i) * src.cols + y0 + j) * channels + 2];
+      int position = ((x0 + i) * src.cols + y0 + j) * channels;
+      sumf[0] += temp * src.data[position + 0];
+      sumf[1] += temp * src.data[position + 1];
+      sumf[2] += temp * src.data[position + 2];
     }
   }
+  /*__m128 row_0_coeff = _mm_load_ss(coeff);
+  __m128 row_1_coeff = _mm_load_ss(coeff+4);
+  __m128 row_2_coeff = _mm_load_ss(coeff+8);
+  __m128 row_3_coeff = _mm_load_ss(coeff+12);
+  int row0 = (x0 + 0) * src.cols + y0 ;
+  __m128 row_0_data_0 = _mm_set_ps((float)src.data[(row0 + 3) * channels + 0],(float)src.data[(row0 + 2) * channels + 0],(float)src.data[(row0 + 1) * channels + 0],(float)src.data[(row0 + 0) * channels + 0]);
+  __m128 row_0_data_1 = _mm_set_ps((float)src.data[(row0 + 3) * channels + 1],(float)src.data[(row0 + 2) * channels + 1],(float)src.data[(row0 + 1) * channels + 1],(float)src.data[(row0 + 0) * channels + 1]);
+  __m128 row_0_data_2 = _mm_set_ps((float)src.data[(row0 + 3) * channels + 2],(float)src.data[(row0 + 2) * channels + 2],(float)src.data[(row0 + 1) * channels + 2],(float)src.data[(row0 + 0) * channels + 2]);
+  int row1 = (x0 + 1) * src.cols + y0 ;
+  __m128 row_1_data_0 = _mm_set_ps((float)src.data[(row1 + 3) * channels + 0],(float)src.data[(row1 + 2) * channels + 0],(float)src.data[(row1 + 1) * channels + 0],(float)src.data[(row1 + 0) * channels + 0]);
+  __m128 row_1_data_1 = _mm_set_ps((float)src.data[(row1 + 3) * channels + 1],(float)src.data[(row1 + 2) * channels + 1],(float)src.data[(row1 + 1) * channels + 1],(float)src.data[(row1 + 0) * channels + 1]);
+  __m128 row_1_data_2 = _mm_set_ps((float)src.data[(row1 + 3) * channels + 2],(float)src.data[(row1 + 2) * channels + 2],(float)src.data[(row1 + 1) * channels + 2],(float)src.data[(row1 + 0) * channels + 2]);
+  int row2 = (x0 + 2) * src.cols + y0 ;
+  __m128 row_2_data_0 = _mm_set_ps((float)src.data[(row2 + 3) * channels + 0],(float)src.data[(row2 + 2) * channels + 0],(float)src.data[(row2 + 1) * channels + 0],(float)src.data[(row2 + 0) * channels + 0]);
+  __m128 row_2_data_1 = _mm_set_ps((float)src.data[(row2 + 3) * channels + 1],(float)src.data[(row2 + 2) * channels + 1],(float)src.data[(row2 + 1) * channels + 1],(float)src.data[(row2 + 0) * channels + 1]);
+  __m128 row_2_data_2 = _mm_set_ps((float)src.data[(row2 + 3) * channels + 2],(float)src.data[(row2 + 2) * channels + 2],(float)src.data[(row2 + 1) * channels + 2],(float)src.data[(row2 + 0) * channels + 2]);
+  int row3 = (x0 + 3) * src.cols + y0 ;
+  __m128 row_3_data_0 = _mm_set_ps((float)src.data[(row3 + 3) * channels + 0],(float)src.data[(row3 + 2) * channels + 0],(float)src.data[(row2 + 1) * channels + 0],(float)src.data[(row3 + 0) * channels + 0]);
+  __m128 row_3_data_1 = _mm_set_ps((float)src.data[(row3 + 3) * channels + 1],(float)src.data[(row3 + 2) * channels + 1],(float)src.data[(row2 + 1) * channels + 1],(float)src.data[(row3 + 0) * channels + 1]);
+  __m128 row_3_data_2 = _mm_set_ps((float)src.data[(row3 + 3) * channels + 2],(float)src.data[(row3 + 2) * channels + 2],(float)src.data[(row2 + 1) * channels + 2],(float)src.data[(row3 + 0) * channels + 2]);  
+  //_mm_mul_ss
+  __m128 row_0_sum_0 = _mm_mul_ss(row_0_coeff, row_0_data_0);
+  __m128 row_0_sum_1 = _mm_mul_ss(row_0_coeff, row_0_data_1);
+  __m128 row_0_sum_2 = _mm_mul_ss(row_0_coeff, row_0_data_2);
+  __m128 row_1_sum_0 = _mm_mul_ss(row_1_coeff, row_1_data_0);
+  __m128 row_1_sum_1 = _mm_mul_ss(row_1_coeff, row_1_data_1);
+  __m128 row_1_sum_2 = _mm_mul_ss(row_1_coeff, row_1_data_2);
+  __m128 row_2_sum_0 = _mm_mul_ss(row_2_coeff, row_2_data_0);
+  __m128 row_2_sum_1 = _mm_mul_ss(row_2_coeff, row_2_data_1);
+  __m128 row_2_sum_2 = _mm_mul_ss(row_2_coeff, row_2_data_2);
+  __m128 row_3_sum_0 = _mm_mul_ss(row_3_coeff, row_3_data_0);
+  __m128 row_3_sum_1 = _mm_mul_ss(row_3_coeff, row_3_data_1);
+  __m128 row_3_sum_2 = _mm_mul_ss(row_3_coeff, row_3_data_2);
+
+  sum[0] = static_cast<unsigned char>(row_0_sum_0[0]+row_0_sum_0[1]+row_0_sum_0[2]+row_0_sum_0[3]+row_1_sum_0[0]+row_1_sum_0[1]+row_1_sum_0[2]+row_1_sum_0[3]+row_2_sum_0[0]+row_2_sum_0[1]+row_2_sum_0[2]+row_2_sum_0[3]+row_3_sum_0[0]+row_3_sum_0[1]+row_3_sum_0[2]+row_3_sum_0[3]);
+  sum[1] = static_cast<unsigned char>(row_0_sum_1[0]+row_0_sum_1[1]+row_0_sum_1[2]+row_0_sum_1[3]+row_1_sum_1[0]+row_1_sum_1[1]+row_1_sum_1[2]+row_1_sum_1[3]+row_2_sum_1[0]+row_2_sum_1[1]+row_2_sum_1[2]+row_2_sum_1[3]+row_3_sum_1[0]+row_3_sum_1[1]+row_3_sum_1[2]+row_3_sum_1[3]);
+  sum[2] = static_cast<unsigned char>(row_0_sum_2[0]+row_0_sum_2[1]+row_0_sum_2[2]+row_0_sum_2[3]+row_1_sum_2[0]+row_1_sum_2[1]+row_1_sum_2[2]+row_1_sum_2[3]+row_2_sum_2[0]+row_2_sum_2[1]+row_2_sum_2[2]+row_2_sum_2[3]+row_3_sum_2[0]+row_3_sum_2[1]+row_3_sum_2[2]+row_3_sum_2[3]);*/  
   sum[0] = static_cast<unsigned char>(sumf[0]);
   sum[1] = static_cast<unsigned char>(sumf[1]);
-  sum[2] = static_cast<unsigned char>(sumf[2]);  
+  sum[2] = static_cast<unsigned char>(sumf[2]); 
   return ;
 }
 
@@ -69,8 +110,8 @@ void ResizeImagePart(RGBImage src, float ratio, int x_left, int x_right, int y_u
     return x < src.rows - 2 && x > 1 && y < src.cols - 2 && y > 1;
   };
   Timer part("worker");
-  for (register int i = x_left; i < x_right; i++) {
-    for (register int j = y_up; j < y_down; j++) {
+  for (int i = x_left; i < x_right; i++) {
+    for (int j = y_up; j < y_down; j++) {
       float src_x = i / ratio;
       float src_y = j / ratio;
       if (check_perimeter(src_x, src_y)) {
@@ -94,17 +135,17 @@ void ResizeImagePart(RGBImage src, float ratio, int x_left, int x_right, int y_u
 }
 
 RGBImage ResizeImage(RGBImage src, float ratio) {
-  register const int channels = src.channels;
+  const int channels = src.channels;
   Timer timer("resize image by 5x");
-  register const int resize_rows = src.rows * ratio;
-  register const int resize_cols = src.cols * ratio;
+  const int resize_rows = src.rows * ratio;
+  const int resize_cols = src.cols * ratio;
 
   printf("resize to: %d x %d\n", resize_rows, resize_cols);
 
   auto res = new unsigned char[channels * resize_rows * resize_cols];
   std::fill(res, res + channels * resize_rows * resize_cols, 0);
 
-  register const int n=5;
+  const int n=5;
   std::thread PartThread[n][n];
 
   for(int x = 0 ; x < n ; x++)
