@@ -7,7 +7,7 @@
 #include "immintrin.h"
 #include <vector>
 
-inline float WeightCoeff(float x, float a) {
+inline float WeightCoeff(float x,const float a) {
   if (x <= 1) {
     float x_2 = x*x;
     return 1 - (a + 3) * x_2 + (a + 2) * x * x_2;
@@ -28,10 +28,21 @@ static void CalcCoeff4x4(float x, float y, float *coeff) {
   u += 1;
   v += 1;
 
+  float WCoeffU[4];
+  WCoeffU[0] = WeightCoeff(fabs(u - 0), a);
+  WCoeffU[1] = WeightCoeff(fabs(u - 1), a);
+  WCoeffU[2] = WeightCoeff(fabs(u - 2), a);
+  WCoeffU[3] = WeightCoeff(fabs(u - 3), a);
+  float WCoeffV[4];
+  WCoeffV[0] = WeightCoeff(fabs(v - 0), a);
+  WCoeffV[1] = WeightCoeff(fabs(v - 1), a);
+  WCoeffV[2] = WeightCoeff(fabs(v - 2), a);
+  WCoeffV[3] = WeightCoeff(fabs(v - 3), a);
+
 //  #pragma simd
   for (int i = 0; i < 4; i++) {
     for (int j = 0; j < 4; j++) {
-      coeff[i * 4 + j] = WeightCoeff(fabs(u - i), a) * WeightCoeff(fabs(v - j), a);
+      coeff[i * 4 + j] = WCoeffU[i] * WCoeffV[j];
     }
   }
 }
@@ -109,13 +120,14 @@ void ResizeImagePart(RGBImage src, float ratio, int x_left, int x_right, int y_u
   auto check_perimeter = [src](float x, float y) -> bool {
     return x < src.rows - 2 && x > 1 && y < src.cols - 2 && y > 1;
   };
-  Timer part("worker");
+  Timer part("Worker");
+  float coeff[16];
+  unsigned char sum[3];
   for (int i = x_left; i < x_right; i++) {
     for (int j = y_up; j < y_down; j++) {
       float src_x = i / ratio;
       float src_y = j / ratio;
       if (check_perimeter(src_x, src_y)) {
-        float coeff[16];
         CalcCoeff4x4(src_x, src_y, coeff);
         /*std::thread worker0(ResizeImageThread, src, i, j, src_x, src_y, channels, 0, res, coeff);
         std::thread worker1(ResizeImageThread, src, i, j, src_x, src_y, channels, 1, res, coeff);
@@ -123,7 +135,6 @@ void ResizeImagePart(RGBImage src, float ratio, int x_left, int x_right, int y_u
         worker0.join();
         worker1.join();
         worker2.join();*/
-        unsigned char sum[3];
         BGRAfterBiCubic(src, src_x, src_y, channels, sum, coeff);
         res[((i * resize_cols) + j) * channels + 0] = sum[0];
         res[((i * resize_cols) + j) * channels + 1] = sum[1];
