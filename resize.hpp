@@ -32,14 +32,14 @@ static void CalcCoeff4x4(float x, float y, float *coeff) {
 
   float WCoeffU[16];
   WCoeffU[0] = WCoeffU[1] = WCoeffU[2] = WCoeffU[3] = WeightCoeff(fabs(u - 0), a);
-  WCoeffU[4] = WCoeffU[5] = WCoeffU[6] = WCoeffU[7] = WeightCoeff(fabs(u - 0), a);
-  WCoeffU[8] = WCoeffU[9] = WCoeffU[10] = WCoeffU[11] = WeightCoeff(fabs(u - 0), a);
-  WCoeffU[12] = WCoeffU[13] = WCoeffU[14] = WCoeffU[15] = WeightCoeff(fabs(u - 0), a);
+  WCoeffU[4] = WCoeffU[5] = WCoeffU[6] = WCoeffU[7] = WeightCoeff(fabs(u - 1), a);
+  WCoeffU[8] = WCoeffU[9] = WCoeffU[10] = WCoeffU[11] = WeightCoeff(fabs(u - 2), a);
+  WCoeffU[12] = WCoeffU[13] = WCoeffU[14] = WCoeffU[15] = WeightCoeff(fabs(u - 3), a);
   float WCoeffV[16];
-  WCoeffV[0] = WCoeffV[1] = WCoeffV[2] = WCoeffV[3] = WeightCoeff(fabs(u - 0), a);
-  WCoeffV[4] = WCoeffV[5] = WCoeffV[6] = WCoeffV[7] = WeightCoeff(fabs(u - 0), a);
-  WCoeffV[8] = WCoeffV[9] = WCoeffV[10] = WCoeffV[11] = WeightCoeff(fabs(u - 0), a);
-  WCoeffV[12] = WCoeffV[13] = WCoeffV[14] = WCoeffV[15] = WeightCoeff(fabs(u - 0), a);
+  WCoeffV[0] = WCoeffV[1] = WCoeffV[2] = WCoeffV[3] = WeightCoeff(fabs(v - 0), a);
+  WCoeffV[4] = WCoeffV[5] = WCoeffV[6] = WCoeffV[7] = WeightCoeff(fabs(v - 1), a);
+  WCoeffV[8] = WCoeffV[9] = WCoeffV[10] = WCoeffV[11] = WeightCoeff(fabs(v - 2), a);
+  WCoeffV[12] = WCoeffV[13] = WCoeffV[14] = WCoeffV[15] = WeightCoeff(fabs(v - 3), a);
 
   /*//#pragma simd
   for (int i = 0; i < 4; i++) {
@@ -97,7 +97,7 @@ static void BGRAfterBiCubic(RGBImage src, float x_float, float y_float, unsigned
   __m128 row_3_data_2 = _mm_set_ps((float)src.data[(row3 + 3) * channels + 2],(float)src.data[(row3 + 2) * channels + 2],(float)src.data[(row2 + 1) * channels + 2],(float)src.data[(row3 + 0) * channels + 2]);  
   */
   
-  __m512 __coeff = _mm512_load_ps((void *)coeff);
+  __m512 __coeff = _mm512_load_ps(coeff);
 
   int row0 = (x0 + 0) * src.cols + y0 ;
   int row1 = (x0 + 1) * src.cols + y0 ;
@@ -141,7 +141,7 @@ static void BGRAfterBiCubic(RGBImage src, float x_float, float y_float, unsigned
   sum[0] = static_cast<unsigned char>(_mm512_reduce_add_ps(__sum_0));
   sum[1] = static_cast<unsigned char>(_mm512_reduce_add_ps(__sum_1));
   sum[2] = static_cast<unsigned char>(_mm512_reduce_add_ps(__sum_2));
-  
+
   return ;
 }
 
