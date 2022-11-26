@@ -30,23 +30,32 @@ static void CalcCoeff4x4(float x, float y, float *coeff) {
   u += 1;
   v += 1;
 
-  float WCoeffU[4];
-  WCoeffU[0] = WeightCoeff(fabs(u - 0), a);
-  WCoeffU[1] = WeightCoeff(fabs(u - 1), a);
-  WCoeffU[2] = WeightCoeff(fabs(u - 2), a);
-  WCoeffU[3] = WeightCoeff(fabs(u - 3), a);
-  float WCoeffV[4];
-  WCoeffV[0] = WeightCoeff(fabs(v - 0), a);
-  WCoeffV[1] = WeightCoeff(fabs(v - 1), a);
-  WCoeffV[2] = WeightCoeff(fabs(v - 2), a);
-  WCoeffV[3] = WeightCoeff(fabs(v - 3), a);
+  float WCoeffU[16];
+  WCoeffU[0] = WCoeffU[1] = WCoeffU[2] = WCoeffU[3] = WeightCoeff(fabs(u - 0), a);
+  WCoeffU[4] = WCoeffU[5] = WCoeffU[6] = WCoeffU[7] = WeightCoeff(fabs(u - 0), a);
+  WCoeffU[8] = WCoeffU[9] = WCoeffU[10] = WCoeffU[11] = WeightCoeff(fabs(u - 0), a);
+  WCoeffU[12] = WCoeffU[13] = WCoeffU[14] = WCoeffU[15] = WeightCoeff(fabs(u - 0), a);
+  float WCoeffV[16];
+  WCoeffV[0] = WCoeffV[1] = WCoeffV[2] = WCoeffV[3] = WeightCoeff(fabs(u - 0), a);
+  WCoeffV[4] = WCoeffV[5] = WCoeffV[6] = WCoeffV[7] = WeightCoeff(fabs(u - 0), a);
+  WCoeffV[8] = WCoeffV[9] = WCoeffV[10] = WCoeffV[11] = WeightCoeff(fabs(u - 0), a);
+  WCoeffV[12] = WCoeffV[13] = WCoeffV[14] = WCoeffV[15] = WeightCoeff(fabs(u - 0), a);
 
-//  #pragma simd
+  /*//#pragma simd
   for (int i = 0; i < 4; i++) {
     for (int j = 0; j < 4; j++) {
       coeff[i * 4 + j] = WCoeffU[i] * WCoeffV[j];
     }
-  }
+  }*/
+  
+  //__m512 __WCoeffU = _mm512_set_ps(WCoeffU[0], WCoeffU[0], WCoeffU[0], WCoeffU[0], WCoeffU[1], WCoeffU[1], WCoeffU[1], WCoeffU[1], WCoeffU[2], WCoeffU[2], WCoeffU[2], WCoeffU[2], WCoeffU[3], WCoeffU[3], WCoeffU[3], WCoeffU[3]);
+  //__m512 __WCoeffV = _mm512_set_ps(WCoeffV[0], WCoeffV[0], WCoeffV[0], WCoeffV[0], WCoeffV[1], WCoeffV[1], WCoeffV[1], WCoeffV[1], WCoeffV[2], WCoeffV[2], WCoeffV[2], WCoeffV[2], WCoeffV[3], WCoeffV[3], WCoeffV[3], WCoeffV[3]);
+
+  __m512 __WCoeffU = _mm512_load_ps(WCoeffU);
+  __m512 __WCoeffV = _mm512_load_ps(WCoeffV);
+
+  _mm512_storeu_ps(coeff,_mm512_mul_ps(__WCoeffU,__WCoeffV));
+
 }
 
 static void BGRAfterBiCubic(RGBImage src, float x_float, float y_float, unsigned char *sum, float *coeff) {
@@ -125,9 +134,14 @@ static void BGRAfterBiCubic(RGBImage src, float x_float, float y_float, unsigned
   sum[1] = static_cast<unsigned char>(sumf[1]);
   sum[2] = static_cast<unsigned char>(sumf[2]); */
 
-  sum[0] = static_cast<unsigned char>(__sum_0[0] + __sum_0[1] +__sum_0[2] +__sum_0[3] +__sum_0[4] +__sum_0[5] +__sum_0[6] +__sum_0[7] +__sum_0[8] +__sum_0[9] +__sum_0[10] +__sum_0[11] +__sum_0[12] +__sum_0[13] +__sum_0[14] +__sum_0[15]);
-  sum[1] = static_cast<unsigned char>(__sum_1[0] + __sum_1[1] +__sum_1[2] +__sum_1[3] +__sum_1[4] +__sum_1[5] +__sum_1[6] +__sum_1[7] +__sum_1[8] +__sum_1[9] +__sum_1[10] +__sum_1[11] +__sum_1[12] +__sum_1[13] +__sum_1[14] +__sum_1[15]);
-  sum[2] = static_cast<unsigned char>(__sum_2[0] + __sum_2[1] +__sum_2[2] +__sum_2[3] +__sum_2[4] +__sum_2[5] +__sum_2[6] +__sum_2[7] +__sum_2[8] +__sum_2[9] +__sum_2[10] +__sum_2[11] +__sum_2[12] +__sum_2[13] +__sum_2[14] +__sum_2[15]);
+  //sum[0] = static_cast<unsigned char>(__sum_0[0] + __sum_0[1] +__sum_0[2] +__sum_0[3] +__sum_0[4] +__sum_0[5] +__sum_0[6] +__sum_0[7] +__sum_0[8] +__sum_0[9] +__sum_0[10] +__sum_0[11] +__sum_0[12] +__sum_0[13] +__sum_0[14] +__sum_0[15]);
+  //sum[1] = static_cast<unsigned char>(__sum_1[0] + __sum_1[1] +__sum_1[2] +__sum_1[3] +__sum_1[4] +__sum_1[5] +__sum_1[6] +__sum_1[7] +__sum_1[8] +__sum_1[9] +__sum_1[10] +__sum_1[11] +__sum_1[12] +__sum_1[13] +__sum_1[14] +__sum_1[15]);
+  //sum[2] = static_cast<unsigned char>(__sum_2[0] + __sum_2[1] +__sum_2[2] +__sum_2[3] +__sum_2[4] +__sum_2[5] +__sum_2[6] +__sum_2[7] +__sum_2[8] +__sum_2[9] +__sum_2[10] +__sum_2[11] +__sum_2[12] +__sum_2[13] +__sum_2[14] +__sum_2[15]);
+
+  sum[0] = static_cast<unsigned char>(_mm512_reduce_add_ps(__sum_0));
+  sum[1] = static_cast<unsigned char>(_mm512_reduce_add_ps(__sum_1));
+  sum[2] = static_cast<unsigned char>(_mm512_reduce_add_ps(__sum_2));
+  
   return ;
 }
 
