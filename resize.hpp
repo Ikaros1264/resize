@@ -7,6 +7,8 @@
 #include "immintrin.h"
 #include <vector>
 
+#define channels 3
+
 inline float WeightCoeff(float x,const float a) {
   if (x <= 1) {
     float x_2 = x*x;
@@ -47,7 +49,7 @@ static void CalcCoeff4x4(float x, float y, float *coeff) {
   }
 }
 
-static void BGRAfterBiCubic(RGBImage src, float x_float, float y_float, int channels, unsigned char *sum, float *coeff) {
+static void BGRAfterBiCubic(RGBImage src, float x_float, float y_float, unsigned char *sum, float *coeff) {
 
   int x0 = floor(x_float) - 1;
   int y0 = floor(y_float) - 1;
@@ -113,7 +115,7 @@ static void BGRAfterBiCubic(RGBImage src, float x_float, float y_float, int chan
 //  return;
 //}
 
-void ResizeImagePart(RGBImage src, float ratio, int x_left, int x_right, int y_up, int y_down, int channels, unsigned char *res) {
+void ResizeImagePart(RGBImage src, float ratio, int x_left, int x_right, int y_up, int y_down, unsigned char *res) {
 //  static const int resize_rows = src.rows * ratio;
 //  static const int resize_cols = src.cols * ratio;
   const int resize_cols = src.cols * ratio;
@@ -135,7 +137,7 @@ void ResizeImagePart(RGBImage src, float ratio, int x_left, int x_right, int y_u
         worker0.join();
         worker1.join();
         worker2.join();*/
-        BGRAfterBiCubic(src, src_x, src_y, channels, sum, coeff);
+        BGRAfterBiCubic(src, src_x, src_y, sum, coeff);
         res[((i * resize_cols) + j) * channels + 0] = sum[0];
         res[((i * resize_cols) + j) * channels + 1] = sum[1];
         res[((i * resize_cols) + j) * channels + 2] = sum[2];
@@ -146,7 +148,6 @@ void ResizeImagePart(RGBImage src, float ratio, int x_left, int x_right, int y_u
 }
 
 RGBImage ResizeImage(RGBImage src, float ratio) {
-  const int channels = src.channels;
   Timer timer("resize image by 5x");
   const int resize_rows = src.rows * ratio;
   const int resize_cols = src.cols * ratio;
@@ -156,12 +157,12 @@ RGBImage ResizeImage(RGBImage src, float ratio) {
   auto res = new unsigned char[channels * resize_rows * resize_cols];
   std::fill(res, res + channels * resize_rows * resize_cols, 0);
 
-  const int n=5;
+  const int n=8;
   std::thread PartThread[n][n];
 
   for(int x = 0 ; x < n ; x++)
     for(int y = 0 ; y < n ; y++){
-      PartThread[x][y] = std::thread(ResizeImagePart, src, ratio, (int)((resize_rows/n)*x), (int)((resize_rows/n)*(x+1)), (int)((resize_cols/n)*y), (int)((resize_cols/n)*(y+1)), channels, res);
+      PartThread[x][y] = std::thread(ResizeImagePart, src, ratio, (int)((resize_rows/n)*x), (int)((resize_rows/n)*(x+1)), (int)((resize_cols/n)*y), (int)((resize_cols/n)*(y+1)), res);
     }
   for(int x = 0 ; x < n ; x++)
     for(int y = 0 ; y < n ; y++){
