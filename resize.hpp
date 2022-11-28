@@ -36,10 +36,10 @@ static void CalcCoeff4x4(float x, float y, float *coeff) {
   WCoeffU[8] = WCoeffU[9] = WCoeffU[10] = WCoeffU[11] = WeightCoeff(fabs(u - 2), a);
   WCoeffU[12] = WCoeffU[13] = WCoeffU[14] = WCoeffU[15] = WeightCoeff(fabs(u - 3), a);
   float WCoeffV[16];
-  WCoeffV[0] = WCoeffV[1] = WCoeffV[2] = WCoeffV[3] = WeightCoeff(fabs(v - 0), a);
-  WCoeffV[4] = WCoeffV[5] = WCoeffV[6] = WCoeffV[7] = WeightCoeff(fabs(v - 1), a);
-  WCoeffV[8] = WCoeffV[9] = WCoeffV[10] = WCoeffV[11] = WeightCoeff(fabs(v - 2), a);
-  WCoeffV[12] = WCoeffV[13] = WCoeffV[14] = WCoeffV[15] = WeightCoeff(fabs(v - 3), a);
+  WCoeffV[0] = WCoeffV[4] = WCoeffV[8] = WCoeffV[12] = WeightCoeff(fabs(v - 0), a);
+  WCoeffV[1] = WCoeffV[5] = WCoeffV[9] = WCoeffV[13] = WeightCoeff(fabs(v - 1), a);
+  WCoeffV[2] = WCoeffV[6] = WCoeffV[10] = WCoeffV[14] = WeightCoeff(fabs(v - 2), a);
+  WCoeffV[3] = WCoeffV[7] = WCoeffV[11] = WCoeffV[15] = WeightCoeff(fabs(v - 3), a);
 
   /*//#pragma simd
   for (int i = 0; i < 4; i++) {
@@ -164,8 +164,8 @@ void ResizeImagePart(RGBImage *src, float ratio, int x_left, int x_right, int y_
   unsigned char sum[3];
   if(x_left == 0) x_left += 2;
   if(y_up == 0) y_up += 2;
-  if(x_right == src->rows) x_right -= 3;
-  if(y_down == src->cols) y_down -= 3;
+  if(x_right/ratio == src->rows) x_right -= 2;
+  if(y_down/ratio == src->cols) y_down -= 2;
   for (int i = x_left; i < x_right; i++) {
     for (int j = y_up; j < y_down; j++) {
       float src_x = i / ratio;
@@ -190,8 +190,8 @@ void ResizeImagePart(RGBImage *src, float ratio, int x_left, int x_right, int y_
 
 RGBImage ResizeImage(RGBImage src, float ratio) {
   Timer timer("resize image by 5x");
-  const int resize_rows = src.rows * ratio - 2;
-  const int resize_cols = src.cols * ratio - 2;
+  const int resize_rows = src.rows * ratio ;
+  const int resize_cols = src.cols * ratio ;
 
   printf("resize to: %d x %d\n", resize_rows, resize_cols);
 
